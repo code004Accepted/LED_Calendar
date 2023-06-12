@@ -58,6 +58,8 @@ while(True):
 	ended_text = str(readinfo2["ended_text"])
 	confirmed_text = str(readinfo2["confirmed_text"])
 	cancelled_text = str(readinfo2["cancelled_text"])
+	tentative_text = str(readinfo2["tentative_text"])
+	unspecified_text = str(readinfo2["unspecified_text"])
 	display_location = str(readinfo2["display_location"])
 	refresh_interval = int(readinfo2["refresh_interval"])
 	scrolltext = str(readinfo2["scrolltext"])
@@ -202,6 +204,10 @@ while(True):
 			f.write("<td style=\"color: #00d619\">" + confirmed_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "Cancelled"):
 			f.write("<td style=\"color: #ff1f1f\">" + cancelled_text + "</td>\n</tr>\n\n")
+		elif (str(status[i]) == "Unknown"):
+			f.write("<td>" + tentative_text + "</td>\n</tr>\n\n")
+		elif (str(status[i]) == "Unspecified"):
+			f.write("<td>" + unspecified_text + "</td>\n</tr>\n\n")
 		else:
 			f.write("<td>" + str(status[i]) + "</td>\n</tr>\n\n")
 
