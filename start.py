@@ -19,7 +19,7 @@ status = []
 location = []
 name = []
 
-def fuckswap(a, b):
+def fuckswap (a, b):
 	dtendtemp = dtend[a]
 	dtend[a] = dtend[b]
 	dtend[b] = dtendtemp
@@ -107,9 +107,9 @@ while(True):
 				delta:timedelta = combine_end.astimezone(tz_user) - now
 				realenddate = combine_end.astimezone(tz_user)
 
-			if (delta.days < -1 or (delta.days == -1 and realenddate.day != now.day)):=
+			if (delta.days < -1 or (delta.days == -1 and realenddate.day != now.day)):
 				continue
-			elif (delta.days == -1 and realenddate.day == now.day):=
+			elif (delta.days == -1 and realenddate.day == now.day):
 				today_done = True
 
 			timestart = component.decoded("dtstart")
