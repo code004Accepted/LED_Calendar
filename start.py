@@ -166,7 +166,7 @@ while(True):
 	for i in range(len(name)-1):
 		mark = False
 		for j in range(len(name)-i-1):
-			if (dtend[j+1] < dtend[j]):
+			if (dtstart[j+1] < dtstart[j]):
 				fuckswap(j, j+1)
 				mark = True
 		if(not mark):
