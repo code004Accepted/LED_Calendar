@@ -22,7 +22,7 @@ name = []
 def fuckswap(a, b):
 	dtstart[a], dtstart[b] = dtstart[b], dtstart[a]
 	dtend[a], dtend[b] = dtend[b], dtend[a]
-	priority[a], priority[b] = priority[b], priority[b]
+	priority[a], priority[b] = priority[b], priority[a]
 	status[a], status[b] = status[b], status[a]
 	location[a], location[b] = location[b], location[a]
 	name[a], name[b] = name[b], name[a]
