@@ -19,25 +19,13 @@ status = []
 location = []
 name = []
 
-def fuckswap (a, b):
-	dtendtemp = dtend[a]
-	dtend[a] = dtend[b]
-	dtend[b] = dtendtemp
-	dtstarttemp = dtstart[a]
-	dtstart[a] = dtstart[b]
-	dtstart[b] = dtstarttemp
-	prioritytemp = priority[a]
-	priority[a] = priority[b]
-	priority[b] = prioritytemp
-	statustemp = status[a]
-	status[a] = status[b]
-	status[b] = statustemp
-	locationtemp = location[a]
-	location[a] = location[b]
-	location[b] = locationtemp
-	nametemp = name[a]
-	name[a] = name[b]
-	name[b] = nametemp
+def fuckswap(a, b):
+	dtstart[a], dtstart[b] = dtstart[b], dtstart[a]
+	dtend[a], dtend[b] = dtend[b], dtend[a]
+	priority[a], priority[b] = priority[b], priority[b]
+	status[a], status[b] = status[b], status[a]
+	location[a], location[b] = location[b], location[a]
+	name[a], name[b] = name[b], name[a]
 
 while(True):
 
@@ -211,7 +199,7 @@ while(True):
 		else:
 			f.write("<td>" + str(status[i]) + "</td>\n</tr>\n\n")
 
-		if ((i == 0 and display_location != "None") or display_location == "All"):
+		if ((display_location == "First" and i == 0) or display_location == "All" or (display_location == "Auto" and str(location[i]) != "None")):
 			f.write("<tr>\n<td></td>\n<td style=\"color: #ff1f1f\">Calling at:</td>\n<td></td>\n<td>" + str(location[i]) + "</td>\n<td></td>\n</tr>\n\n")
 
 	f.write("""</table>
