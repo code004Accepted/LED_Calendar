@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 import time
+from ast import literal_eval as make_tuple
 from icalendar import Calendar
 import requests
 import pytz
+import recurring_ical_events
 
 def ordinal(n: int):
-    if 11 <= (n % 100) <= 13:
-        suffix = "th"
-    else:
-        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
-    return str(n) + suffix
+	if 11 <= (n % 100) <= 13:
+		suffix = "th"
+	else:
+		suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+	return str(n) + suffix
 
 dtend = []
 dtstart = []
@@ -27,15 +29,16 @@ def fuckswap(a, b):
 	location[a], location[b] = location[b], location[a]
 	name[a], name[b] = name[b], name[a]
 
-while(True):
+while (True):
 
 	config_object = ConfigParser()
 	config_object.read("config.ini")
 
-	readinfo = config_object["USERINFO"]
+	readinfo = config_object["CALENDAR"]
 	url = str(readinfo["url"])
 	tz_user = pytz.timezone(readinfo["timezone"])
 	regenerate_interval = int(readinfo["regenerate_interval"])
+	hide_events = str(readinfo["hide_events"])
 
 	readinfo2 = config_object["SITE"]
 	if (str(readinfo2["no_unknown"]) == "True"):
@@ -52,7 +55,7 @@ while(True):
 	refresh_interval = int(readinfo2["refresh_interval"])
 	scrolltext = str(readinfo2["scrolltext"])
 
-	r = requests.get(url, allow_redirects=True, timeout = 10)
+	r = requests.get(url, allow_redirects=True, timeout=10)
 	open('data.ics', 'wb').write(r.content)
 
 	e = open('data.ics', 'rb')
@@ -66,90 +69,135 @@ while(True):
 	location = []
 	name = []
 
-	count = 0 # Count is only for debug and display purposes.
+	all_count = 0  # all_count is only for debug and display purposes.
+	shown_count = 0  # shown_count is only for debug and display purposes.
 
-	for component in ecal.walk():
-		if component.name == "VEVENT":
+	filter_mode = str(readinfo["filter_mode"])
 
-			count = count + 1
+	if (filter_mode == "Specific"):
+		begindate = make_tuple(str(readinfo["specific_start"]))
+		enddate = make_tuple(str(readinfo["specific_end"]))
+		if (begindate == enddate):
+			allevents = recurring_ical_events.of(ecal).at(begindate)
+		else:
+			allevents = recurring_ical_events.of(
+				ecal).between(begindate, enddate)
+	elif (filter_mode == "Relative"):
+		begindate = int(readinfo["relative_start"])
+		enddate = int(readinfo["relative_end"])
+		allevents = recurring_ical_events.of(ecal).between(datetime(now.year, now.month, now.day) + timedelta(
+			begindate), datetime(now.year, now.month, now.day) + timedelta(enddate, 59, 999, 999, 59, 23))
+	else:
+		allevents = recurring_ical_events.of(ecal).between(datetime(
+			now.year, now.month, now.day), datetime(now.year, now.month, now.day) + timedelta(14))
 
-			format_datetime = True # For End Times
-			format_datetime2 = True # For Start Times
-			today_done = False
-			ongoing = False
+	for event in recurring_ical_events.of(ecal).between((1969), (2099)):
+		all_count += 1
 
-			timeend = component.decoded("dtend")
-			if (str(timeend) == "None"):
-				timeend = component.decoded("dtstart")
+	for event in allevents:
 
-			combine_end = datetime.combine(timeend, datetime.min.time(), tz_user)
+		shown_count += 1
 
-			try:
-				delta:timedelta = timeend - now
-			except TypeError:
-				format_datetime = False
-				delta:timedelta = combine_end - now
+		format_datetime = True  # For End Times
+		format_datetime2 = True  # For Start Times
+		before_today = False
+		today_done = False
+		ongoing = False
 
-			if (format_datetime):
-				delta:timedelta = timeend.astimezone(tz_user) - now
-				realenddate = timeend.astimezone(tz_user)
-			else:
-				delta:timedelta = combine_end.astimezone(tz_user) - now
-				realenddate = combine_end.astimezone(tz_user)
+		try:
+			timeend = event["DTEND"].dt
+		except KeyError:
+			timeend = event["DTSTART"].dt
 
-			if (delta.days < -1 or (delta.days == -1 and realenddate.day != now.day)):
-				continue
-			elif (delta.days == -1 and realenddate.day == now.day):
-				today_done = True
+		combine_end = datetime.combine(timeend, datetime.min.time(), tz_user)
 
-			timestart = component.decoded("dtstart")
+		try:
+			delta: timedelta = timeend - now
+		except TypeError:
+			format_datetime = False
+			delta: timedelta = combine_end - now
 
-			combine_start = datetime.combine(timestart, datetime.min.time(), tz_user)
+		if (format_datetime):
+			delta: timedelta = timeend.astimezone(tz_user) - now
+			realenddate = timeend.astimezone(tz_user)
+		else:
+			delta: timedelta = combine_end.astimezone(tz_user) - now
+			realenddate = combine_end.astimezone(tz_user)
 
-			try:
-				delta2:timedelta = timestart - now
-			except TypeError:
-				format_datetime2 = False
-				delta2:timedelta = combine_start - now
+		if (delta.days < -1 or (delta.days == -1 and realenddate.day != now.day)):
+			before_today = True
+		elif (delta.days == -1 and realenddate.day == now.day):
+			today_done = True
 
-			if (format_datetime2):
-				delta2:timedelta = timestart.astimezone(tz_user) - now
-				realstartdate = timestart.astimezone(tz_user)
-			else:
-				delta:timedelta = combine_start.astimezone(tz_user) - now
-				realstartdate = combine_start.astimezone(tz_user)
+		if (hide_events == "All" and (before_today or today_done)):
+			continue
+		if (hide_events == "Today" and before_today):
+			continue
 
-			if (delta2.days < 0 and (not today_done)):
-				ongoing = True
+		timestart = event["DTSTART"].dt
 
-			dtend.append ( realenddate )
-			dtstart.append ( realstartdate )
+		combine_start = datetime.combine(
+			timestart, datetime.min.time(), tz_user)
 
-			name.append( component.get("summary") )
+		try:
+			delta2: timedelta = timestart - now
+		except TypeError:
+			format_datetime2 = False
+			delta2: timedelta = combine_start - now
 
-			if (component.get("priority") == 1):
-				priority.append( "HIGH" )
-			elif (component.get("priority") == 9):
-				priority.append( "LOW" )
-			elif (component.get("priority") == 5 or no_unknown):
-				priority.append( "MID" )
-			else:
-				priority.append( "N/A" )
+		if (format_datetime2):
+			delta2: timedelta = timestart.astimezone(tz_user) - now
+			realstartdate = timestart.astimezone(tz_user)
+		else:
+			delta: timedelta = combine_start.astimezone(tz_user) - now
+			realstartdate = combine_start.astimezone(tz_user)
 
-			if (ongoing and str(component.get("status")) != "CANCELLED"):
-				status.append( "Departed" )
-			elif (today_done and str(component.get("status")) != "CANCELLED"):
-				status.append( "Arrived" )
-			elif (str(component.get("status")) == "TENTATIVE"):
-				status.append( "Unknown" )
-			elif (str(component.get("status")) == "CANCELLED"):
-				status.append( "Cancelled" )
-			elif (str(component.get("status")) == "CONFIRMED" or no_unknown):
-				status.append( "On Time" )
-			else:
-				status.append( "Unspecified" )
+		if (delta2.days < 0 and (not today_done)):
+			ongoing = True
 
-			location.append( component.get("location") )
+		dtend.append(realenddate)
+		dtstart.append(realstartdate)
+
+		name.append(event["SUMMARY"])
+
+		try:
+			prioritynum = event["PRIORITY"]
+		except KeyError:
+			prioritynum = 0
+
+		if (prioritynum == 1):
+			priority.append("HIGH")
+		elif (prioritynum == 9):
+			priority.append("LOW")
+		elif (prioritynum == 5 or (no_unknown and prioritynum == 0)):
+			priority.append("MID")
+		else:
+			priority.append("N/A")
+
+		try:
+			stats = event["STATUS"]
+		except KeyError:
+			stats = "Unspecified"
+
+		if (ongoing and stats != "CANCELLED"):
+			status.append("Departed")
+		elif ((before_today or today_done) and stats != "CANCELLED"):
+			status.append("Arrived")
+		elif (stats == "TENTATIVE"):
+			status.append("Unknown")
+		elif (stats == "CANCELLED"):
+			status.append("Cancelled")
+		elif (stats == "CONFIRMED" or no_unknown):
+			status.append("On Time")
+		else:
+			status.append("Unspecified")
+
+		try:
+			locas = event["LOCATION"]
+		except KeyError:
+			locas = "None"
+
+		location.append(locas)
 
 	for i in range(len(name)-1):
 		mark = False
@@ -157,10 +205,10 @@ while(True):
 			if (dtstart[j+1] < dtstart[j]):
 				fuckswap(j, j+1)
 				mark = True
-		if(not mark):
+		if (not mark):
 			break
 
-	f = open("index.html", "w")
+	f = open("index.html", "w", encoding="utf-8")
 
 	f.write("""<html>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -182,16 +230,21 @@ while(True):
 </tr>\n\n""")
 
 	for i in range(len(name)):
-		f.write("<tr>\n<td>" + str(ordinal(i+1)) + "</td>\n<td>" + str(dtstart[i].strftime('%d/%b/%y %H:%M')) + "</td>\n<td>" + str(priority[i]) + "</td>\n<td>" + str(name[i]) + "</td>\n")
+		f.write("<tr>\n<td>" + str(ordinal(i+1)) + "</td>\n<td>" + str(dtstart[i].strftime(
+			'%d/%b/%y %H:%M')) + "</td>\n<td>" + str(priority[i]) + "</td>\n<td>" + str(name[i]) + "</td>\n")
 
 		if (str(status[i]) == "Departed"):
-			f.write("<td style=\"color: #00d619\">" + started_text + "</td>\n</tr>\n\n")
+			f.write("<td style=\"color: #00d619\">" +
+					started_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "Arrived"):
-			f.write("<td style=\"color: #c842f5\">" + ended_text + "</td>\n</tr>\n\n")
+			f.write("<td style=\"color: #c842f5\">" +
+					ended_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "On Time"):
-			f.write("<td style=\"color: #00d619\">" + confirmed_text + "</td>\n</tr>\n\n")
+			f.write("<td style=\"color: #00d619\">" +
+					confirmed_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "Cancelled"):
-			f.write("<td style=\"color: #ff1f1f\">" + cancelled_text + "</td>\n</tr>\n\n")
+			f.write("<td style=\"color: #ff1f1f\">" +
+					cancelled_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "Unknown"):
 			f.write("<td>" + tentative_text + "</td>\n</tr>\n\n")
 		elif (str(status[i]) == "Unspecified"):
@@ -199,8 +252,9 @@ while(True):
 		else:
 			f.write("<td>" + str(status[i]) + "</td>\n</tr>\n\n")
 
-		if ((display_location == "First" and i == 0) or display_location == "All" or (display_location == "Auto" and str(location[i]) != "None")):
-			f.write("<tr>\n<td></td>\n<td style=\"color: #ff1f1f\">Calling at:</td>\n<td></td>\n<td>" + str(location[i]) + "</td>\n<td></td>\n</tr>\n\n")
+		if ((display_location == "First" and i == 0) or display_location == "All" or (display_location == "AllAuto" and str(location[i]) != "None") or (display_location == "FirstAuto" and i == 0 and str(location[i]) != "None") or (display_location == "Today" and dtstart[i].day <= now.day and dtend[i].day >= now.day) or (display_location == "TodayAuto" and dtstart[i].day <= now.day and dtend[i].day >= now.day and str(location[i]) != "None")):
+			f.write("<tr>\n<td></td>\n<td style=\"color: #ff1f1f\">Calling at:</td>\n<td></td>\n<td>" +
+					str(location[i]) + "</td>\n<td></td>\n</tr>\n\n")
 
 	f.write("""</table>
 <div id="scroll-container">
@@ -217,5 +271,10 @@ while(True):
 """)
 
 	f.close()
-	print("\nRefreshed successfully at " + str(now.strftime('%Y-%m-%d %H:%M:%S.%f')) + ".\nRendered " + str(len(name)) + " events out of " + str(count) + " fetched.\n")
-	time.sleep(regenerate_interval)
+	print("\nRefreshed successfully at " + str(now.strftime('%Y-%m-%d %H:%M:%S.%f')) + ".\nRendered " +
+		  str(len(name)) + " events out of " + str(shown_count) + ", filtered from " + str(all_count) + " fetched.\n")
+	try:
+		time.sleep(regenerate_interval)
+	except KeyboardInterrupt:
+		print("Keyboard interruption detected. Program ending.")
+		break
