@@ -35,7 +35,7 @@ while (True):
 	config_object.read("config.ini")
 
 	readinfo = config_object["CALENDAR"]
-	url = str(readinfo["url"])
+	url = make_tuple(str(readinfo["url"]))
 	tz_user = pytz.timezone(readinfo["timezone"])
 	regenerate_interval = int(readinfo["regenerate_interval"])
 	hide_events = str(readinfo["hide_events"])
@@ -53,14 +53,8 @@ while (True):
 	unspecified_text = str(readinfo2["unspecified_text"])
 	display_location = str(readinfo2["display_location"])
 	refresh_interval = int(readinfo2["refresh_interval"])
+	location_link = str(readinfo2["location_link"])
 	scrolltext = str(readinfo2["scrolltext"])
-
-	r = requests.get(url, allow_redirects=True, timeout=10)
-	open('data.ics', 'wb').write(r.content)
-
-	e = open('data.ics', 'rb')
-	ecal = Calendar.from_ical(e.read())
-	now = datetime.now(tz_user)
 
 	dtend = []
 	dtstart = []
@@ -68,34 +62,44 @@ while (True):
 	status = []
 	location = []
 	name = []
-
+ 
 	all_count = 0  # all_count is only for debug and display purposes.
 	shown_count = 0  # shown_count is only for debug and display purposes.
+ 
+ 
+	now = datetime.now(tz_user)
 
-	filter_mode = str(readinfo["filter_mode"])
+	allevents = []
+	
+	for item in url:
+		r = requests.get(item, allow_redirects=True, timeout=10)
+		open('data.ics', 'wb').write(r.content)
 
-	if (filter_mode == "Specific"):
-		begindate = make_tuple(str(readinfo["specific_start"]))
-		enddate = make_tuple(str(readinfo["specific_end"]))
-		if (begindate == enddate):
-			allevents = recurring_ical_events.of(ecal).at(begindate)
+		e = open('data.ics', 'rb')
+		ecal = Calendar.from_ical(e.read())
+		e.close()
+		filter_mode = str(readinfo["filter_mode"])
+
+		if (filter_mode == "Specific"):
+			begindate = make_tuple(str(readinfo["specific_start"]))
+			enddate = make_tuple(str(readinfo["specific_end"]))
+			if (begindate == enddate):
+				allevents = allevents + recurring_ical_events.of(ecal).at(begindate)
+			else:
+				allevents = allevents + recurring_ical_events.of(
+					ecal).between(begindate, enddate)
+		elif (filter_mode == "Relative"):
+			begindate = int(readinfo["relative_start"])
+			enddate = int(readinfo["relative_end"])
+			allevents = allevents + recurring_ical_events.of(ecal).between(datetime(now.year, now.month, now.day) + timedelta(
+				begindate), datetime(now.year, now.month, now.day) + timedelta(enddate, 59, 999, 999, 59, 23))
 		else:
-			allevents = recurring_ical_events.of(
-				ecal).between(begindate, enddate)
-	elif (filter_mode == "Relative"):
-		begindate = int(readinfo["relative_start"])
-		enddate = int(readinfo["relative_end"])
-		allevents = recurring_ical_events.of(ecal).between(datetime(now.year, now.month, now.day) + timedelta(
-			begindate), datetime(now.year, now.month, now.day) + timedelta(enddate, 59, 999, 999, 59, 23))
-	else:
-		allevents = recurring_ical_events.of(ecal).between(datetime(
-			now.year, now.month, now.day), datetime(now.year, now.month, now.day) + timedelta(14))
-
-	for event in recurring_ical_events.of(ecal).between((1969), (2099)):
-		all_count += 1
-
+			allevents = allevents + recurring_ical_events.of(ecal).between(datetime(
+				now.year, now.month, now.day), datetime(now.year, now.month, now.day) + timedelta(14))
+		for event in recurring_ical_events.of(ecal).between((1969), (2099)):
+			all_count += 1
+	
 	for event in allevents:
-
 		shown_count += 1
 
 		format_datetime = True  # For End Times
@@ -252,7 +256,13 @@ while (True):
 		else:
 			f.write("<td>" + str(status[i]) + "</td>\n</tr>\n\n")
 
-		if ((display_location == "First" and i == 0) or display_location == "All" or (display_location == "AllAuto" and str(location[i]) != "None") or (display_location == "FirstAuto" and i == 0 and str(location[i]) != "None") or (display_location == "Today" and dtstart[i].day <= now.day and dtend[i].day >= now.day) or (display_location == "TodayAuto" and dtstart[i].day <= now.day and dtend[i].day >= now.day and str(location[i]) != "None")):
+		if (((display_location == "First" and i == 0) 
+      or display_location == "All" 
+      or (display_location == "AllAuto" and str(location[i]) != "None") 
+      or (display_location == "FirstAuto" and i == 0 and str(location[i]) != "None") 
+      or (display_location == "Today" and dtstart[i].day <= now.day and dtend[i].day >= now.day) 
+      or (display_location == "TodayAuto" and dtstart[i].day <= now.day and dtend[i].day >= now.day and str(location[i]) != "None")) 
+      and ("".join(list(str(location[i]))[0:4]) != "http" or location_link == "True")):
 			f.write("<tr>\n<td></td>\n<td style=\"color: #ff1f1f\">Calling at:</td>\n<td></td>\n<td>" +
 					str(location[i]) + "</td>\n<td></td>\n</tr>\n\n")
 
