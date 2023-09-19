@@ -156,7 +156,7 @@ while (True):
 			delta: timedelta = combine_start.astimezone(tz_user) - now
 			realstartdate = combine_start.astimezone(tz_user)
 
-		if (delta2.days < 0 and (not today_done)):
+		if (delta2.days < 0 and (not today_done) and (not before_today)):
 			ongoing = True
 
 		dtend.append(realenddate)
