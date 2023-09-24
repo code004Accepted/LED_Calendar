@@ -7,15 +7,32 @@ body {
     background-color: #000;
 }
 
-tr, td {
+#timetable tr, #timetable td, #timetable th {
     text-align: left;
     color: #ff9729;
 }
 
-table {
+#timetable {
     width: 70%;
     font-size: 17.5px;
     font-family: 'DotMatrix';
+}
+
+#inputbox {
+    width: 70%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1%;
+    margin-bottom: 1%;
+    text-align: center;
+    display: block;
+    color: #ff9729;
+    font-size: 17.5px;
+    font-family: 'DotMatrix';
+    background-color: #000;
+    border: none;
+    outline: none;
+    overflow: hidden;
 }
 
 #scroll-container {
