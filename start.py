@@ -54,6 +54,7 @@ while (True):
 	display_location = str(readinfo2["display_location"])
 	refresh_interval = int(readinfo2["refresh_interval"])
 	location_link = str(readinfo2["location_link"])
+	search_bar = str(readinfo2["search_bar"])
 	scrolltext = str(readinfo2["scrolltext"])
 
 	dtend = []
@@ -129,9 +130,9 @@ while (True):
 			realenddate = combine_end.astimezone(tz_user)
 
 		if (delta.days < -1 or (delta.days == -1 and realenddate.day != now.day)):
-			before_today = True
+			before_today = True # Event has concluded before today
 		elif (delta.days == -1 and realenddate.day == now.day):
-			today_done = True
+			today_done = True # Event has concluded today
 
 		if (hide_events == "All" and (before_today or today_done)):
 			continue
@@ -223,12 +224,14 @@ while (True):
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<br/>
-<table align="center">
+<br/>""")
+	if (str(search_bar) == "True"):
+		f.write("""<input type="text" id="inputbox" onkeyup="myFunction()" placeholder="Search for events.." title="Enter event name" />""")
+	f.write("""<table align="center" id="timetable">
 <tr>
-<td>POS&nbsp;&nbsp;&nbsp; </td>
-<td>Time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </td>
-<td>PRI&nbsp;&nbsp;&nbsp; </td>
+<td>POS&nbsp;&nbsp; </td>
+<td>Time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </td>
+<td>PRI&nbsp;&nbsp; </td>
 <td>Name&nbsp;&nbsp;&nbsp; </td>
 <td>Status&nbsp;&nbsp;&nbsp; </td>
 </tr>\n\n""")
@@ -276,6 +279,7 @@ while (True):
 	f.write("""</div>
 </div>
 <br/>
+<script src="code.js"> </script>
 </body>
 </html>
 """)
