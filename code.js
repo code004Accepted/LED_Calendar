@@ -10,7 +10,11 @@ function myFunction() {
       if (td) {
         txtValue = td.textContent || td.innerText;
         txtValue2 = td2.textContent || td2.innerText;
-        if (txtValue2 == "Calling at:") {
+        if (txtValue2 == "Calling at:" && txtValue.toUpperCase().indexOf(filter) > -1) {
+          tr[i-1].style.display = "";
+          tr[i].style.display = "";
+        }
+        else if (txtValue2 == "Calling at:") {
           tr[i].style.display = tr[i-1].style.display;
         }
         else if (txtValue.toUpperCase().indexOf(filter) > -1) {
